@@ -1,9 +1,20 @@
+import numpy as np
 from pathlib import Path
 import joblib
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 from xgboost import XGBClassifier
+
+def get_model_feature_count(model) -> int:
+    """Extract expected feature count from fitted model."""
+    if hasattr(model, 'n_features_in_'):
+        return int(model.n_features_in_)
+    elif hasattr(model, 'feature_importances_'):
+        return len(model.feature_importances_)
+    elif hasattr(model, 'coef_'):
+        return model.coef_.shape[1]
+    return None
 
 def train_logistic_regression(X_train, y_train, random_state: int = 42) -> LogisticRegression:
     """Train Logistic Regression classifier with balanced class weights."""
@@ -128,11 +139,9 @@ def load_models(input_dir: str = None, expected_features: int = None) -> dict:
             try:
                 m = joblib.load(filepath)
                 if expected_features is not None:
-                    n_feat = getattr(m, 'n_features_in_', getattr(m, 'feature_importances_', None))
-                    if n_feat is not None:
-                        count = n_feat if isinstance(n_feat, (int, np.integer)) else len(n_feat)
-                        if count != expected_features:
-                            continue
+                    count = get_model_feature_count(m)
+                    if count is not None and count != expected_features:
+                        continue
                 models[name] = m
             except Exception:
                 continue

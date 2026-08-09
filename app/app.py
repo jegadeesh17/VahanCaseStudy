@@ -263,6 +263,22 @@ def load_app_data():
     df = load_data(engine)
     return df
 
+@st.cache_resource(show_spinner=False)
+def load_app_models(num_features: int):
+    models = load_models(expected_features=num_features)
+    if not models or len(models) < 3:
+        engine = get_engine()
+        raw_df = load_data(engine)
+        X_feat, y_feat, _ = build_features(raw_df)
+        X_tr, X_te, y_tr, y_te = get_train_test_split(X_feat, y_feat, test_size=0.2, random_state=42)
+        models = train_all_models(X_tr, y_tr)
+        best_rf, _ = tune_best_model(X_tr, y_tr, model_name='Random Forest')
+        best_xgb, _ = tune_best_model(X_tr, y_tr, model_name='XGBoost')
+        models['Fine-Tuned Random Forest'] = best_rf
+        models['Fine-Tuned XGBoost'] = best_xgb
+        save_models(models)
+    return models
+
 try:
     df = load_app_data()
 except Exception as e:
