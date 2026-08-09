@@ -2,6 +2,7 @@ from pathlib import Path
 import joblib
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV
 from xgboost import XGBClassifier
 
 def train_logistic_regression(X_train, y_train, random_state: int = 42) -> LogisticRegression:
@@ -50,6 +51,47 @@ def train_all_models(X_train, y_train, random_state: int = 42) -> dict:
     }
     return models
 
+def tune_best_model(X_train, y_train, model_name: str = 'XGBoost', random_state: int = 42):
+    """
+    Perform hyperparameter fine-tuning using GridSearchCV on the selected best model.
+    Returns the fine-tuned model and best parameters dictionary.
+    """
+    pos_count = (y_train == 1).sum()
+    neg_count = (y_train == 0).sum()
+    scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
+
+    if model_name == 'XGBoost':
+        base_clf = XGBClassifier(random_state=random_state, eval_metric='logloss', n_jobs=-1)
+        param_grid = {
+            'n_estimators': [100, 200],
+            'max_depth': [3, 5, 7],
+            'learning_rate': [0.01, 0.05, 0.1],
+            'scale_pos_weight': [scale_pos_weight, scale_pos_weight * 0.8]
+        }
+    elif model_name == 'Random Forest':
+        base_clf = RandomForestClassifier(class_weight='balanced', random_state=random_state, n_jobs=-1)
+        param_grid = {
+            'n_estimators': [100, 200],
+            'max_depth': [5, 10, None],
+            'min_samples_split': [2, 5]
+        }
+    else:
+        base_clf = LogisticRegression(class_weight='balanced', max_iter=1000, random_state=random_state)
+        param_grid = {'C': [0.01, 0.1, 1.0, 10.0]}
+
+    grid_search = GridSearchCV(
+        estimator=base_clf,
+        param_grid=param_grid,
+        scoring='roc_auc',
+        cv=3,
+        n_jobs=-1
+    )
+    grid_search.fit(X_train, y_train)
+    best_model = grid_search.best_estimator_
+    best_params = grid_search.best_params_
+
+    return best_model, best_params
+
 def save_models(models_dict: dict, output_dir: str = None) -> None:
     """Persist trained models to disk using joblib."""
     if output_dir is None:
@@ -76,7 +118,8 @@ def load_models(input_dir: str = None) -> dict:
     mapping = {
         'logistic_regression.pkl': 'Logistic Regression',
         'random_forest.pkl': 'Random Forest',
-        'xgboost.pkl': 'XGBoost'
+        'xgboost.pkl': 'XGBoost',
+        'fine_tuned_model.pkl': 'Fine-Tuned Model'
     }
     for file, name in mapping.items():
         filepath = input_dir / file

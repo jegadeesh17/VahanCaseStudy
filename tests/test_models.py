@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 from src.db_setup import get_engine, load_data
 from src.feature_engineering import build_features, get_train_test_split
-from src.models import train_all_models, save_models, load_models
+from src.models import train_all_models, tune_best_model, save_models, load_models
 
 @pytest.fixture(scope="module")
 def prepared_data():
@@ -25,5 +25,13 @@ def test_train_and_save_models(prepared_data, tmp_path):
     save_models(models, output_dir=tmp_path)
     reloaded = load_models(input_dir=tmp_path)
     
-    assert len(reloaded) == 3
+    assert len(reloaded) >= 3
     assert 'Random Forest' in reloaded
+
+def test_tune_best_model(prepared_data):
+    X_train, X_test, y_train, y_test = prepared_data
+    best_model, best_params = tune_best_model(X_train, y_train, model_name='XGBoost')
+    
+    assert best_model is not None
+    assert isinstance(best_params, dict)
+    assert 'n_estimators' in best_params
