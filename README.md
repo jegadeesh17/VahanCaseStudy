@@ -88,7 +88,7 @@ VahanCaseStudy/
 └── requirements.txt                  # Python dependencies (core subset)
 ```
 
-> **Note:** `requirements.txt` currently lists only `pandas`, `numpy`, and `streamlit`. The full pipeline additionally requires `scikit-learn`, `xgboost`, `joblib`, `matplotlib`, `seaborn`, `sqlalchemy`, `psycopg2-binary`, `openpyxl`, and `python-dotenv`. Install all dependencies manually or update the file before running the full pipeline.
+> **Note:** `requirements.txt` includes all core production dependencies. Run `pip install -r requirements.txt` to install everything in one step.
 
 ---
 
@@ -104,11 +104,6 @@ git clone https://github.com/jegadeesh17/VahanCaseStudy.git
 cd VahanCaseStudy
 
 pip install -r requirements.txt
-```
-
-To install all required dependencies (beyond what `requirements.txt` currently lists):
-```powershell
-pip install pandas numpy streamlit scikit-learn xgboost joblib matplotlib seaborn sqlalchemy psycopg2-binary openpyxl python-dotenv
 ```
 
 ### **3. Environment Setup**
