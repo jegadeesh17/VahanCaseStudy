@@ -119,10 +119,12 @@ def load_models(input_dir: str = None) -> dict:
         'logistic_regression.pkl': 'Logistic Regression',
         'random_forest.pkl': 'Random Forest',
         'xgboost.pkl': 'XGBoost',
-        'fine_tuned_model.pkl': 'Fine-Tuned Model'
+        'fine-tuned_random_forest.pkl': 'Fine-Tuned Random Forest',
+        'fine-tuned_xgboost.pkl': 'Fine-Tuned XGBoost',
     }
     for file, name in mapping.items():
         filepath = input_dir / file
         if filepath.exists():
             models[name] = joblib.load(filepath)
     return models
+
