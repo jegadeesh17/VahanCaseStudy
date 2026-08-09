@@ -4,3 +4,7 @@ __pycache__/
 .env
 .pytest_cache/
 .ipynb_checkpoints/
+# Raw dataset — never commit
+data/*.xlsx
+data/*.csv
+data/*.json
