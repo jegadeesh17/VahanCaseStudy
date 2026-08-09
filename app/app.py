@@ -435,74 +435,64 @@ elif page == "Q2: SQL Engine":
 # PAGE 4: Q3 ML BENCHMARKS & SELECTION
 # ==========================================
 elif page == "Q3: ML Benchmarks":
-    st.subheader("Q3 — Predictive Machine Learning Benchmark")
-    st.caption("Comparing model candidates on statistical evaluation metrics and practical deployment viability.")
+    st.subheader("Q3 — Candidate Model Benchmarking (3 Baseline Models)")
+    st.caption("Step 1: Benchmark candidate algorithms (Logistic Regression, Random Forest, XGBoost) on statistical metrics and feature usability.")
     
     X, y, encoders = build_features(df)
     X_train, X_test, y_train, y_test = get_train_test_split(X, y, test_size=0.2, random_state=42)
     
-    try:
-        models = load_models(expected_features=X.shape[1])
-    except TypeError:
-        models = load_models()
-    if not models or len(models) < 3:
-        with st.spinner("Training ML models..."):
-            models = train_all_models(X_train, y_train)
-            best_rf, _ = tune_best_model(X_train, y_train, model_name='Random Forest')
-            best_xgb, _ = tune_best_model(X_train, y_train, model_name='XGBoost')
-            models['Fine-Tuned Random Forest'] = best_rf
-            models['Fine-Tuned XGBoost'] = best_xgb
-            save_models(models)
+    models = load_app_models(X.shape[1])
+    baseline_models = {
+        'Logistic Regression': models['Logistic Regression'],
+        'Random Forest': models['Random Forest'],
+        'XGBoost': models['XGBoost']
+    }
             
-    st.subheader("Model Performance Benchmark Table")
-    sum_df = summary_table(models, X_test, y_test)
+    st.subheader("Candidate Model Benchmark Table")
+    sum_df = summary_table(baseline_models, X_test, y_test)
     st.dataframe(sum_df, use_container_width=True)
     
     st.subheader("Confusion Matrices (Class Imbalance Evaluation)")
-    fig_cm = plot_all_confusion_matrices(models, X_test, y_test)
+    fig_cm = plot_all_confusion_matrices(baseline_models, X_test, y_test)
     st.pyplot(fig_cm)
 
-    st.subheader("Feature Driver Comparison (Usability Assessment)")
-    fig_imp = plot_feature_importances(models, list(X.columns))
+    st.subheader("Feature Driver Comparison (Candidate Usability Assessment)")
+    tree_baselines = {'Random Forest': baseline_models['Random Forest'], 'XGBoost': baseline_models['XGBoost']}
+    fig_imp = plot_feature_importances(tree_baselines, list(X.columns))
     st.pyplot(fig_imp)
 
 # ==========================================
-# PAGE 5: Q3 PRODUCTION MODEL DRIVERS
+# PAGE 5: Q3 PRODUCTION MODEL SELECTION & FINE-TUNING
 # ==========================================
 elif page == "Q3: Feature Drivers":
-    st.subheader("Q3 — Production Model (Random Forest) Drivers")
-    st.caption("Evaluating Random Forest feature importances for operational lead scoring and tele-calling strategies.")
+    st.subheader("Q3 — Production Model Selection & Hyperparameter Fine-Tuning")
+    st.caption("Step 2: Select top production candidate (Random Forest), fine-tune hyperparameters via GridSearchCV, and evaluate operational drivers.")
     
     X, y, _ = build_features(df)
-    try:
-        models = load_models(expected_features=X.shape[1])
-    except TypeError:
-        models = load_models()
-    if not models:
-        X_train, X_test, y_train, y_test = get_train_test_split(X, y, test_size=0.2, random_state=42)
-        models = train_all_models(X_train, y_train)
-        best_rf, _ = tune_best_model(X_train, y_train, model_name='Random Forest')
-        models['Fine-Tuned Random Forest'] = best_rf
-        save_models(models)
-    rf_model = models.get('Fine-Tuned Random Forest', models.get('Random Forest', list(models.values())[0]))
+    X_train, X_test, y_train, y_test = get_train_test_split(X, y, test_size=0.2, random_state=42)
+    models = load_app_models(X.shape[1])
     
-    fig_imp = plot_feature_importances({'Random Forest': rf_model}, list(X.columns))
+    rf_baseline = models['Random Forest']
+    rf_tuned = models.get('Fine-Tuned Random Forest', rf_baseline)
+    
+    st.subheader("Baseline vs. Fine-Tuned Random Forest Comparison")
+    rf_comp_models = {
+        'Baseline Random Forest': rf_baseline,
+        'Fine-Tuned Random Forest': rf_tuned
+    }
+    comp_df = summary_table(rf_comp_models, X_test, y_test)
+    st.dataframe(comp_df, use_container_width=True)
+    
+    st.subheader("Production Feature Drivers (Fine-Tuned Random Forest)")
+    fig_imp = plot_feature_importances({'Fine-Tuned Random Forest': rf_tuned}, list(X.columns))
     st.pyplot(fig_imp)
     
     st.markdown("""
     <div class="justification-box">
-    <h3><b>Why Random Forest is Chosen for Production Deployment:</b></h3>
+    <h3><b>Why Random Forest was Selected & Fine-Tuned for Production Deployment:</b></h3>
     <ol>
-        <li><b>Early-Funnel Scoring:</b> XGBoost concentrates over <b>80%</b> of its predictive weight on <code>ob_after_upload</code> (a late-stage onboarding event). In production, newly uploaded leads have not reached onboarding yet — this makes XGBoost's top feature unavailable at scoring time.</li>
-        <li><b>Leakage-Free Feature Set:</b> <code>ob_after_upload</code> and <code>ob_after_first_attempt</code> are <b>excluded from the model</b> — they require the lead to have already connected and expressed interest, which defeats early-funnel scoring. The model uses only features observable at upload/initial call time.</li>
-        <li><b>Multi-Lever Actionability:</b> Random Forest distributes importance across early-stage operational levers:
-            <ul>
-                <li><code>upload_to_first_attempt_p50_hrs</code> (Speed to first call — fully controllable by ops)</li>
-                <li><code>lead_source_encoded</code> (Lead acquisition channel — budget allocation lever)</li>
-                <li><code>attempt_per_lead</code> (Call frequency — tele-caller effort signal)</li>
-                <li><code>connected</code>, <code>interested</code>, <code>tag_filled</code> (Early-call quality signals)</li>
-            </ul>
-        </li>
+        <li><b>Selection Rationale:</b> Random Forest distributes importance across early-stage, operationally controllable levers (speed to call <code>upload_to_first_attempt_p50_hrs</code>, call attempt frequency <code>attempt_per_lead</code>, and channel <code>lead_source_encoded</code>).</li>
+        <li><b>Hyperparameter Tuning:</b> Fine-tuning via <code>GridSearchCV</code> optimizes class weighting, tree depth, and minimum split sizes to improve ROC-AUC and recall on the minority FT conversion class.</li>
         <li><b>Operational Recommendation:</b> Tele-calling teams should optimize speed-to-first-call (<code>p50_hrs</code>) and call attempt frequency for top-performing lead channels to maximize First Trip completions.</li>
     </ol>
     </div>
@@ -517,16 +507,7 @@ elif page == "Lead Predictor":
     st.caption("Interactive lead scoring tool using trained production Random Forest model to estimate First Trip conversion probability.")
     
     X, y, encoders = build_features(df)
-    try:
-        models = load_models(expected_features=X.shape[1])
-    except TypeError:
-        models = load_models()
-    if not models:
-        X_train, X_test, y_train, y_test = get_train_test_split(X, y, test_size=0.2, random_state=42)
-        models = train_all_models(X_train, y_train)
-        best_rf, _ = tune_best_model(X_train, y_train, model_name='Random Forest')
-        models['Fine-Tuned Random Forest'] = best_rf
-        save_models(models)
+    models = load_app_models(X.shape[1])
     model = models.get('Fine-Tuned Random Forest', models.get('Random Forest', list(models.values())[0]))
     
     st.info("**Production Model Active:** Fine-Tuned Random Forest | Features scored at upload time — onboarding status intentionally excluded (post-event signal not available for new leads).")
