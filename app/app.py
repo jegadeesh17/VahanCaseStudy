@@ -18,6 +18,64 @@ from src.q2_sql_query import get_q2_result, run_query, COHORT_DATE_AGGREGATION_Q
 from src.feature_engineering import build_features, get_train_test_split
 from src.models import train_all_models, load_models
 from src.evaluation import summary_table, plot_all_confusion_matrices, plot_feature_importances, evaluate_model
+import plotly.graph_objects as go
+
+def plot_plotly_funnel(df: pd.DataFrame):
+    """Generate a clean Plotly horizontal bar chart for conversion funnel stage drop-off."""
+    funnel_df = overall_funnel_rates(df)
+    fig = go.Figure(go.Bar(
+        x=funnel_df['pct_of_total'],
+        y=funnel_df['stage'],
+        orientation='h',
+        text=[f"<b>{count:,}</b> ({pct:.2f}%)" for count, pct in zip(funnel_df['count'], funnel_df['pct_of_total'])],
+        textposition='outside',
+        marker=dict(
+            color=['#F59E0B', '#EAB308', '#D97706', '#B45309', '#78350F', '#451A03'],
+            line=dict(color='#FFFFFF', width=1)
+        ),
+        cliponaxis=False
+    ))
+    fig.update_layout(
+        margin=dict(l=10, r=90, t=10, b=30),
+        height=330,
+        yaxis=dict(autorange="reversed", title="", tickfont=dict(size=12, color="#0F172A", weight="bold")),
+        xaxis=dict(title="% of Total Uploaded Leads", range=[0, 115], gridcolor="#E2E8F0"),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#334155")
+    )
+    return fig
+
+def plot_plotly_class_imbalance(df: pd.DataFrame):
+    """Generate a clean Plotly bar chart for target class imbalance."""
+    counts = df['ft_after_upload'].value_counts()
+    no_ft = int(counts.get(0, 0))
+    ft = int(counts.get(1, 0))
+    total = no_ft + ft
+    
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=['No FT (0)', 'FT Conversion (1)'],
+        y=[no_ft, ft],
+        text=[f"<b>{no_ft:,}</b><br>({(no_ft/total)*100:.2f}%)", f"<b>{ft:,}</b><br>({(ft/total)*100:.2f}%)"],
+        textposition='outside',
+        marker=dict(
+            color=['#94A3B8', '#F59E0B'],
+            line=dict(color='#FFFFFF', width=1.5)
+        ),
+        width=0.45,
+        cliponaxis=False
+    ))
+    fig.update_layout(
+        margin=dict(l=20, r=20, t=20, b=30),
+        height=330,
+        yaxis=dict(title="Candidate Count", range=[0, total * 1.18], gridcolor="#E2E8F0"),
+        xaxis=dict(title="Target Class (First Trip Status)", tickfont=dict(size=12, color="#0F172A", weight="bold")),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#334155")
+    )
+    return fig
 
 # Streamlit Page Config
 st.set_page_config(
@@ -34,6 +92,14 @@ st.markdown("""
         background-color: #FAFAF9;
     }
     
+    /* Constrain Main Container Width for Comfortable Layout */
+    .main .block-container, [data-testid="stMainBlockContainer"] {
+        max-width: 1450px !important;
+        padding-top: 1.8rem !important;
+        padding-bottom: 3rem !important;
+        margin: 0 auto !important;
+    }
+
     /* Hide Default Sidebar for Clean Top Nav Layout */
     [data-testid="stSidebar"] {
         display: none;
@@ -102,30 +168,31 @@ st.markdown("""
     /* Metric Card Styling */
     .metric-card {
         background: #FFFFFF;
-        border: 1px solid #FDE047;
-        border-top: 4px solid #FACC15;
+        border: 1px solid #E2E8F0;
+        border-top: 3px solid #F59E0B;
         border-radius: 12px;
-        padding: 1.2rem;
+        padding: 1.1rem 1rem;
         text-align: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .metric-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px -2px rgba(250, 204, 21, 0.2);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);
     }
     .metric-value {
         font-size: 1.85rem;
         font-weight: 800;
         color: #0F172A;
+        line-height: 1.2;
     }
     .metric-label {
-        font-size: 0.82rem;
+        font-size: 0.76rem;
         font-weight: 700;
-        color: #854D0E;
+        color: #64748B;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        margin-top: 0.3rem;
+        margin-top: 0.35rem;
     }
 
     /* Justification & Alert Box */
@@ -195,12 +262,12 @@ except Exception as e:
 
 # Define Navigation Options
 PAGES = [
-    "Executive Overview",
-    "Q1: Cohort Performance Ranking",
-    "Q2: SQL Query Engine (PostgreSQL)",
-    "Q3: ML Benchmarks & Selection",
-    "Q3: Production Model Drivers",
-    "Real-Time FT Conversion Predictor"
+    "Overview",
+    "Q1: Cohort Ranking",
+    "Q2: SQL Engine",
+    "Q3: ML Benchmarks",
+    "Q3: Feature Drivers",
+    "Lead Predictor"
 ]
 
 # Initialize Session State for Active Page
@@ -232,16 +299,10 @@ selected_page = st.radio(
 # Active page sync
 page = st.session_state.active_page
 
-# Helper function to switch page from home screen cards
-def switch_to_page(page_name):
-    st.session_state.active_page = page_name
-    st.session_state.top_nav_selection = page_name
-    st.rerun()
-
 # ==========================================
 # PAGE 1: EXECUTIVE OVERVIEW (HOME LAYOUT)
 # ==========================================
-if page == "Executive Overview":
+if page == "Overview":
     st.subheader("Executive Overview & Funnel Metrics")
     st.caption("High-level conversion benchmarks and core operational KPIs across all uploaded candidate leads.")
     
@@ -261,71 +322,52 @@ if page == "Executive Overview":
         st.markdown(f'<div class="metric-card"><div class="metric-value">{connect_rate:.1f}%</div><div class="metric-label">Call Connect Rate</div></div>', unsafe_allow_html=True)
         
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Switchable Module Quick Access Cards Grid on Home Screen
-    st.markdown("### Switchable Platform Modules")
-    m_col1, m_col2, m_col3 = st.columns(3)
-    
-    with m_col1:
-        st.markdown("""
-        <div class="module-card">
-            <div class="module-title">Q1: Cohort Performance Ranking</div>
-            <div class="module-desc">Evaluate top-performing lead sources, conversion rates, and metrics ranking with noise volume filters.</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Open Cohort Analysis", key="btn_q1"):
-            switch_to_page("Q1: Cohort Performance Ranking")
-            
-    with m_col2:
-        st.markdown("""
-        <div class="module-card">
-            <div class="module-title">Q2: SQL Query Engine</div>
-            <div class="module-desc">Execute native aggregated PostgreSQL queries on local database with live result export options.</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Open SQL Engine", key="btn_q2"):
-            switch_to_page("Q2: SQL Query Engine (PostgreSQL)")
-            
-    with m_col3:
-        st.markdown("""
-        <div class="module-card">
-            <div class="module-title">Real-Time FT Predictor</div>
-            <div class="module-desc">Interactive lead scoring tool using trained Random Forest model to predict candidate conversion probability.</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Open Lead Predictor", key="btn_predictor"):
-            switch_to_page("Real-Time FT Conversion Predictor")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    
+    # Conversion Funnel & Class Imbalance Overview
     col_left, col_right = st.columns(2)
     with col_left:
         st.subheader("Conversion Funnel Stage Drop-off")
-        funnel_df = overall_funnel_rates(df)
-        st.dataframe(funnel_df, use_container_width=True)
+        tab_chart, tab_table = st.tabs(["📊 Funnel Chart View", "📋 Funnel Data Table"])
+        with tab_chart:
+            fig_funnel = plot_plotly_funnel(df)
+            st.plotly_chart(fig_funnel, use_container_width=True, config={'displayModeBar': False})
+        with tab_table:
+            funnel_df = overall_funnel_rates(df)
+            st.dataframe(
+                funnel_df,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "stage": st.column_config.TextColumn("Stage Name"),
+                    "count": st.column_config.NumberColumn("Candidate Volume", format="%d"),
+                    "pct_of_total": st.column_config.ProgressColumn(
+                        "% of Total Leads",
+                        format="%.2f%%",
+                        min_value=0,
+                        max_value=100
+                    )
+                }
+            )
         
     with col_right:
         st.subheader("Target Class Imbalance (FT=0 vs FT=1)")
-        fig_imb = plot_class_imbalance(df)
-        st.pyplot(fig_imb)
+        fig_imb = plot_plotly_class_imbalance(df)
+        st.plotly_chart(fig_imb, use_container_width=True, config={'displayModeBar': False})
+        
+        st.info("**Class Imbalance Insight:** Severe positive class imbalance (**0.30% baseline rate**, 54 / 18,198 leads). ML evaluation requires Precision-Recall / PR-AUC focus over standard accuracy.")
 
 # ==========================================
 # PAGE 2: Q1 COHORT PERFORMANCE RANKING
 # ==========================================
-elif page == "Q1: Cohort Performance Ranking":
+elif page == "Q1: Cohort Ranking":
     st.subheader("Q1 — Top Lead-Source Cohorts Evaluation")
     st.caption("Evaluating cohort performance on bottom-line business metrics and lead quality.")
     
     st.markdown(f'<div class="justification-box"><b>Metric Justification & Strategy:</b><br>{METRIC_JUSTIFICATION}</div>', unsafe_allow_html=True)
     
-    col_filter1, col_filter2 = st.columns(2)
-    with col_filter1:
-        min_leads_threshold = st.slider("Minimum Lead Volume Filter (Exclude noise)", min_value=1, max_value=200, value=50)
-    with col_filter2:
-        sort_metric = st.selectbox("Primary Ranking Metric", ["FT Conversion Rate (%)", "Connect Rate (%)", "Interest Rate (%)", "Total Leads"])
-        
     metrics_df = compute_cohort_metrics(df)
-    ranked_df = rank_cohorts(metrics_df, min_leads=min_leads_threshold)
+    # Filter noise cohorts (min_leads=50 default threshold) and rank cohorts
+    ranked_df = rank_cohorts(metrics_df, min_leads=50)
     
     st.subheader("Top 3 Cohorts")
     top3 = top_3_cohorts(ranked_df)
@@ -342,7 +384,7 @@ elif page == "Q1: Cohort Performance Ranking":
 # ==========================================
 # PAGE 3: Q2 SQL QUERY ENGINE
 # ==========================================
-elif page == "Q2: SQL Query Engine (PostgreSQL)":
+elif page == "Q2: SQL Engine":
     st.subheader("Q2 — PostgreSQL SQL Aggregation Query Engine")
     st.caption("Executing native SQL queries directly against local PostgreSQL database vahan_case_study.")
     
@@ -367,7 +409,7 @@ elif page == "Q2: SQL Query Engine (PostgreSQL)":
 # ==========================================
 # PAGE 4: Q3 ML BENCHMARKS & SELECTION
 # ==========================================
-elif page == "Q3: ML Benchmarks & Selection":
+elif page == "Q3: ML Benchmarks":
     st.subheader("Q3 — Predictive Machine Learning Benchmark")
     st.caption("Comparing model candidates on statistical evaluation metrics and practical deployment viability.")
     
@@ -394,7 +436,7 @@ elif page == "Q3: ML Benchmarks & Selection":
 # ==========================================
 # PAGE 5: Q3 PRODUCTION MODEL DRIVERS
 # ==========================================
-elif page == "Q3: Production Model Drivers":
+elif page == "Q3: Feature Drivers":
     st.subheader("Q3 — Production Model (Random Forest) Drivers")
     st.caption("Evaluating Random Forest feature importances for operational lead scoring and tele-calling strategies.")
     
@@ -426,7 +468,7 @@ elif page == "Q3: Production Model Drivers":
 # ==========================================
 # PAGE 6: REAL-TIME FT CONVERSION PREDICTOR
 # ==========================================
-elif page == "Real-Time FT Conversion Predictor":
+elif page == "Lead Predictor":
     st.subheader("Real-Time Candidate FT Predictor")
     st.caption("Interactive lead scoring tool using trained production Random Forest model to estimate First Trip conversion probability.")
     

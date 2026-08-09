@@ -86,3 +86,64 @@ def plot_funnel_by_cohort(df: pd.DataFrame, output_path: str = None) -> plt.Figu
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(output_path, dpi=300)
     return fig
+
+def plot_plotly_funnel(df: pd.DataFrame):
+    """Generate a clean Plotly horizontal bar chart for conversion funnel stage drop-off."""
+    import plotly.graph_objects as go
+    funnel_df = overall_funnel_rates(df)
+    
+    fig = go.Figure(go.Bar(
+        x=funnel_df['pct_of_total'],
+        y=funnel_df['stage'],
+        orientation='h',
+        text=[f"<b>{count:,}</b> ({pct:.2f}%)" for count, pct in zip(funnel_df['count'], funnel_df['pct_of_total'])],
+        textposition='outside',
+        marker=dict(
+            color=['#F59E0B', '#EAB308', '#D97706', '#B45309', '#78350F', '#451A03'],
+            line=dict(color='#FFFFFF', width=1)
+        ),
+        cliponaxis=False
+    ))
+    fig.update_layout(
+        margin=dict(l=10, r=90, t=10, b=30),
+        height=330,
+        yaxis=dict(autorange="reversed", title="", tickfont=dict(size=12, color="#0F172A", weight="bold")),
+        xaxis=dict(title="% of Total Uploaded Leads", range=[0, 115], gridcolor="#E2E8F0"),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#334155")
+    )
+    return fig
+
+def plot_plotly_class_imbalance(df: pd.DataFrame):
+    """Generate a clean Plotly bar chart for target class imbalance."""
+    import plotly.graph_objects as go
+    counts = df['ft_after_upload'].value_counts()
+    no_ft = int(counts.get(0, 0))
+    ft = int(counts.get(1, 0))
+    total = no_ft + ft
+    
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=['No FT (0)', 'FT Conversion (1)'],
+        y=[no_ft, ft],
+        text=[f"<b>{no_ft:,}</b><br>({(no_ft/total)*100:.2f}%)", f"<b>{ft:,}</b><br>({(ft/total)*100:.2f}%)"],
+        textposition='outside',
+        marker=dict(
+            color=['#94A3B8', '#F59E0B'],
+            line=dict(color='#FFFFFF', width=1.5)
+        ),
+        width=0.45,
+        cliponaxis=False
+    ))
+    fig.update_layout(
+        margin=dict(l=20, r=20, t=20, b=30),
+        height=330,
+        yaxis=dict(title="Candidate Count", range=[0, total * 1.18], gridcolor="#E2E8F0"),
+        xaxis=dict(title="Target Class (First Trip Status)", tickfont=dict(size=12, color="#0F172A", weight="bold")),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#334155")
+    )
+    return fig
+
