@@ -93,7 +93,7 @@ def plot_feature_importances(models_dict: dict, feature_names: list, output_path
         
     for ax, (name, model) in zip(axes, tree_models.items()):
         df_imp = get_feature_importance_df(model, feature_names)
-        sns.barplot(data=df_imp, y='feature', x='importance', palette='viridis', ax=ax)
+        sns.barplot(data=df_imp, y='feature', x='importance', hue='feature', palette='viridis', legend=False, ax=ax)
         ax.set_title(f"{name} — Top Drivers of FT Conversion", fontsize=11, fontweight='bold')
         ax.set_xlabel('Relative Importance')
         ax.set_ylabel('Feature')

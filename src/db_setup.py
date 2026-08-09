@@ -42,8 +42,18 @@ def load_data(engine=None, xlsx_path: str = None) -> pd.DataFrame:
         project_root = Path(__file__).resolve().parent.parent
         xlsx_path = project_root / "data" / "Vahan_Case_Study.xlsx"
         
-    df = pd.read_excel(xlsx_path, sheet_name="Raw Data")
-    
+    try:
+        df = pd.read_excel(xlsx_path, sheet_name="Raw Data", engine="openpyxl")
+    except Exception:
+        try:
+            with engine.connect() as conn:
+                df = pd.read_sql("SELECT * FROM leads", conn)
+                if 'upload_date' in df.columns:
+                    df['upload_date'] = pd.to_datetime(df['upload_date']).dt.date
+                return df
+        except Exception as db_err:
+            raise RuntimeError(f"Could not load data from Excel ({xlsx_path}) or PostgreSQL 'leads' table.") from db_err
+
     # Sanitize column names
     col_mapping = {col: sanitize_column_name(col) for col in df.columns}
     df = df.rename(columns=col_mapping)

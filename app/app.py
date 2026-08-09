@@ -22,53 +22,161 @@ from src.evaluation import summary_table, plot_all_confusion_matrices, plot_feat
 # Streamlit Page Config
 st.set_page_config(
     page_title="Vahan.ai — Product Analytics Dashboard",
-    page_icon="🚀",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for Premium Visual Styling
+# Custom CSS for Premium Banana Yellow Visual Styling & Top Bar Navigation
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 2.3rem;
-        font-weight: 800;
-        color: #1E293B;
-        background: linear-gradient(135deg, #0F172A 0%, #2563EB 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.2rem;
+    /* Global Clean Font & Background */
+    .stApp {
+        background-color: #FAFAF9;
     }
-    .sub-header {
+    
+    /* Hide Default Sidebar for Clean Top Nav Layout */
+    [data-testid="stSidebar"] {
+        display: none;
+    }
+
+    /* Main Brand Header */
+    .brand-banner {
+        background: linear-gradient(135deg, #FEF08A 0%, #FACC15 100%);
+        padding: 1.5rem 2rem;
+        border-radius: 14px;
+        margin-bottom: 1.5rem;
+        border: 1px solid #EAB308;
+        box-shadow: 0 4px 12px rgba(250, 204, 21, 0.15);
+    }
+    .brand-title {
+        font-size: 2.2rem;
+        font-weight: 900;
+        color: #0F172A;
+        margin: 0;
+        letter-spacing: -0.02em;
+    }
+    .brand-subtitle {
         font-size: 1.05rem;
-        color: #64748B;
+        font-weight: 500;
+        color: #713F12;
+        margin-top: 0.25rem;
+    }
+
+    /* Top Radio Button Navigation Styling (Banana Yellow Pills) */
+    div[data-testid="stRadio"] {
         margin-bottom: 1.5rem;
     }
-    .metric-card {
-        background: #F8FAFC;
+    div[data-testid="stRadio"] > div {
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        background-color: #FEFCE8;
+        padding: 8px 12px;
+        border-radius: 12px;
+        border: 1px solid #FDE047;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    div[data-testid="stRadio"] label {
+        background-color: #FFFFFF;
         border: 1px solid #E2E8F0;
-        border-radius: 10px;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-weight: 600;
+        color: #334155;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    div[data-testid="stRadio"] label:hover {
+        border-color: #FACC15;
+        background-color: #FEF9C3;
+        color: #0F172A;
+    }
+    div[data-testid="stRadio"] label[aria-checked="true"] {
+        background-color: #FACC15 !important;
+        color: #0F172A !important;
+        border-color: #CA8A04 !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 6px rgba(234, 179, 8, 0.3);
+    }
+
+    /* Metric Card Styling */
+    .metric-card {
+        background: #FFFFFF;
+        border: 1px solid #FDE047;
+        border-top: 4px solid #FACC15;
+        border-radius: 12px;
         padding: 1.2rem;
         text-align: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px -2px rgba(250, 204, 21, 0.2);
     }
     .metric-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #2563EB;
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: #0F172A;
     }
     .metric-label {
-        font-size: 0.85rem;
-        color: #64748B;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #854D0E;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        margin-top: 0.3rem;
     }
+
+    /* Justification & Alert Box */
     .justification-box {
-        background-color: #EFF6FF;
-        border-left: 4px solid #2563EB;
-        padding: 1rem;
-        border-radius: 4px;
+        background-color: #FEF9C3;
+        border-left: 5px solid #FACC15;
+        padding: 1.2rem;
+        border-radius: 8px;
         margin-bottom: 1.5rem;
+        color: #1E293B;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    /* Quick Access Module Cards */
+    .module-card {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-top: 3px solid #FACC15;
+        border-radius: 10px;
+        padding: 1.25rem;
+        height: 100%;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+    .module-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0F172A;
+        margin-bottom: 0.4rem;
+    }
+    .module-desc {
+        font-size: 0.88rem;
+        color: #64748B;
+        margin-bottom: 1rem;
+        line-height: 1.4;
+    }
+
+    /* Styled Buttons (Banana Yellow Primary) */
+    .stButton > button {
+        background-color: #FACC15;
+        color: #0F172A;
+        font-weight: 700;
+        border: 1px solid #CA8A04;
+        border-radius: 8px;
+        padding: 0.5rem 1.2rem;
+        transition: all 0.2s ease;
+    }
+    .stButton > button:hover {
+        background-color: #EAB308;
+        border-color: #854D0E;
+        color: #0F172A;
+        box-shadow: 0 4px 8px rgba(234, 179, 8, 0.25);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -85,31 +193,57 @@ except Exception as e:
     st.error(f"Error loading database: {e}")
     st.stop()
 
-# Sidebar Navigation
-st.sidebar.image("https://vahan.ai/wp-content/uploads/2021/04/vahan-logo.png", width=160)
-st.sidebar.title("Navigation")
-page = st.sidebar.radio(
-    "Select Section",
-    [
-        "📊 Executive Overview",
-        "🏆 Q1: Cohort Performance Ranking",
-        "⚡ Q2: SQL Query Engine (PostgreSQL)",
-        "🤖 Q3: ML Benchmarks & Selection",
-        "🎯 Q3: Production Model Drivers",
-        "🔮 Real-Time FT Conversion Predictor"
-    ]
+# Define Navigation Options
+PAGES = [
+    "Executive Overview",
+    "Q1: Cohort Performance Ranking",
+    "Q2: SQL Query Engine (PostgreSQL)",
+    "Q3: ML Benchmarks & Selection",
+    "Q3: Production Model Drivers",
+    "Real-Time FT Conversion Predictor"
+]
+
+# Initialize Session State for Active Page
+if "active_page" not in st.session_state:
+    st.session_state.active_page = PAGES[0]
+
+# Top Brand Header Banner
+st.markdown("""
+<div class="brand-banner">
+    <div class="brand-title">Vahan.ai — Product Analytics Platform</div>
+    <div class="brand-subtitle">Lead-to-First-Trip (FT) Funnel Performance & Predictive Lead Scoring Engine</div>
+</div>
+""", unsafe_allow_html=True)
+
+# Top Bar Horizontal Switchable Navigation
+def on_page_change():
+    st.session_state.active_page = st.session_state.top_nav_selection
+
+selected_page = st.radio(
+    "Select View",
+    PAGES,
+    index=PAGES.index(st.session_state.active_page) if st.session_state.active_page in PAGES else 0,
+    horizontal=True,
+    key="top_nav_selection",
+    on_change=on_page_change,
+    label_visibility="collapsed"
 )
 
-st.sidebar.markdown("---")
-st.sidebar.caption("Vahan.ai Product Analytics Case Study")
-st.sidebar.caption("Built with Streamlit & PostgreSQL")
+# Active page sync
+page = st.session_state.active_page
+
+# Helper function to switch page from home screen cards
+def switch_to_page(page_name):
+    st.session_state.active_page = page_name
+    st.session_state.top_nav_selection = page_name
+    st.rerun()
 
 # ==========================================
-# PAGE 1: EXECUTIVE OVERVIEW
+# PAGE 1: EXECUTIVE OVERVIEW (HOME LAYOUT)
 # ==========================================
-if page == "📊 Executive Overview":
-    st.markdown('<div class="main-header">Vahan.ai — Product Analytics Overview</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Lead-to-First-Trip (FT) Conversion Funnel Dashboard</div>', unsafe_allow_html=True)
+if page == "Executive Overview":
+    st.subheader("Executive Overview & Funnel Metrics")
+    st.caption("High-level conversion benchmarks and core operational KPIs across all uploaded candidate leads.")
     
     col1, col2, col3, col4 = st.columns(4)
     total_leads = len(df)
@@ -128,6 +262,42 @@ if page == "📊 Executive Overview":
         
     st.markdown("<br>", unsafe_allow_html=True)
     
+    # Switchable Module Quick Access Cards Grid on Home Screen
+    st.markdown("### Switchable Platform Modules")
+    m_col1, m_col2, m_col3 = st.columns(3)
+    
+    with m_col1:
+        st.markdown("""
+        <div class="module-card">
+            <div class="module-title">Q1: Cohort Performance Ranking</div>
+            <div class="module-desc">Evaluate top-performing lead sources, conversion rates, and metrics ranking with noise volume filters.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open Cohort Analysis", key="btn_q1"):
+            switch_to_page("Q1: Cohort Performance Ranking")
+            
+    with m_col2:
+        st.markdown("""
+        <div class="module-card">
+            <div class="module-title">Q2: SQL Query Engine</div>
+            <div class="module-desc">Execute native aggregated PostgreSQL queries on local database with live result export options.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open SQL Engine", key="btn_q2"):
+            switch_to_page("Q2: SQL Query Engine (PostgreSQL)")
+            
+    with m_col3:
+        st.markdown("""
+        <div class="module-card">
+            <div class="module-title">Real-Time FT Predictor</div>
+            <div class="module-desc">Interactive lead scoring tool using trained Random Forest model to predict candidate conversion probability.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Open Lead Predictor", key="btn_predictor"):
+            switch_to_page("Real-Time FT Conversion Predictor")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    
     col_left, col_right = st.columns(2)
     with col_left:
         st.subheader("Conversion Funnel Stage Drop-off")
@@ -142,9 +312,9 @@ if page == "📊 Executive Overview":
 # ==========================================
 # PAGE 2: Q1 COHORT PERFORMANCE RANKING
 # ==========================================
-elif page == "🏆 Q1: Cohort Performance Ranking":
-    st.markdown('<div class="main-header">Q1 — Top Lead-Source Cohorts</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Evaluating cohort performance on bottom-line business metrics</div>', unsafe_allow_html=True)
+elif page == "Q1: Cohort Performance Ranking":
+    st.subheader("Q1 — Top Lead-Source Cohorts Evaluation")
+    st.caption("Evaluating cohort performance on bottom-line business metrics and lead quality.")
     
     st.markdown(f'<div class="justification-box"><b>Metric Justification & Strategy:</b><br>{METRIC_JUSTIFICATION}</div>', unsafe_allow_html=True)
     
@@ -164,21 +334,21 @@ elif page == "🏆 Q1: Cohort Performance Ranking":
     st.subheader("Full Cohort Performance Table")
     st.dataframe(ranked_df, use_container_width=True)
     
-    fig, ax = plt.subplots(figsize=(10, 5))
-    sns.barplot(data=ranked_df, y='lead_source', x='ft_conversion_rate_pct', palette='Blues_r', ax=ax)
-    ax.set_title('Cohort FT Conversion Rate (%)', fontweight='bold')
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    sns.barplot(data=ranked_df, y='lead_source', x='ft_conversion_rate_pct', hue='lead_source', palette='YlOrBr_r', legend=False, ax=ax)
+    ax.set_title('Cohort FT Conversion Rate (%)', fontweight='bold', color='#0F172A')
     st.pyplot(fig)
 
 # ==========================================
 # PAGE 3: Q2 SQL QUERY ENGINE
 # ==========================================
-elif page == "⚡ Q2: SQL Query Engine (PostgreSQL)":
-    st.markdown('<div class="main-header">Q2 — PostgreSQL SQL Aggregation Query</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Executing native SQL queries against local PostgreSQL database <code>vahan_case_study</code></div>', unsafe_allow_html=True)
+elif page == "Q2: SQL Query Engine (PostgreSQL)":
+    st.subheader("Q2 — PostgreSQL SQL Aggregation Query Engine")
+    st.caption("Executing native SQL queries directly against local PostgreSQL database vahan_case_study.")
     
     engine = get_engine()
     
-    query_type = st.radio("Select SQL Query View", ["Cohort x Upload Date Grain (Q2 Standard)", "Cohort Rollup Summary"])
+    query_type = st.radio("Select Query Grain View", ["Cohort x Upload Date Grain (Q2 Standard)", "Cohort Rollup Summary"], horizontal=True)
     
     if query_type == "Cohort x Upload Date Grain (Q2 Standard)":
         query_text = st.text_area("PostgreSQL SQL Query", COHORT_DATE_AGGREGATION_QUERY, height=260)
@@ -188,18 +358,18 @@ elif page == "⚡ Q2: SQL Query Engine (PostgreSQL)":
     if st.button("Execute SQL Query"):
         with st.spinner("Executing query against PostgreSQL..."):
             res_df = run_query(engine, query_text)
-            st.success(f"Query returned {len(res_df)} rows.")
+            st.success(f"Query executed successfully — returned {len(res_df)} rows.")
             st.dataframe(res_df, use_container_width=True)
             
             csv = res_df.to_csv(index=False).encode('utf-8')
-            st.download_button("Download Query Result CSV", data=csv, file_name="vahan_sql_aggregation.csv", mime="text/csv")
+            st.download_button("Download Result CSV", data=csv, file_name="vahan_sql_aggregation.csv", mime="text/csv")
 
 # ==========================================
 # PAGE 4: Q3 ML BENCHMARKS & SELECTION
 # ==========================================
-elif page == "🤖 Q3: ML Benchmarks & Selection":
-    st.markdown('<div class="main-header">Q3 — Predictive Machine Learning Benchmark & Production Selection</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Comparing models on performance metrics AND early-funnel practical usability</div>', unsafe_allow_html=True)
+elif page == "Q3: ML Benchmarks & Selection":
+    st.subheader("Q3 — Predictive Machine Learning Benchmark")
+    st.caption("Comparing model candidates on statistical evaluation metrics and practical deployment viability.")
     
     X, y, encoders = build_features(df)
     X_train, X_test, y_train, y_test = get_train_test_split(X, y, test_size=0.2, random_state=42)
@@ -224,9 +394,9 @@ elif page == "🤖 Q3: ML Benchmarks & Selection":
 # ==========================================
 # PAGE 5: Q3 PRODUCTION MODEL DRIVERS
 # ==========================================
-elif page == "🎯 Q3: Production Model Drivers":
-    st.markdown('<div class="main-header">Q3 — Production Model (Random Forest) Drivers</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Evaluating Random Forest feature importances for operational lead scoring</div>', unsafe_allow_html=True)
+elif page == "Q3: Production Model Drivers":
+    st.subheader("Q3 — Production Model (Random Forest) Drivers")
+    st.caption("Evaluating Random Forest feature importances for operational lead scoring and tele-calling strategies.")
     
     X, y, _ = build_features(df)
     models = load_models()
@@ -236,44 +406,52 @@ elif page == "🎯 Q3: Production Model Drivers":
     st.pyplot(fig_imp)
     
     st.markdown("""
-    ### **Why Random Forest is Chosen for Production Deployment:**
-    1. **Early-Funnel Scoring:** XGBoost concentrates over **80%** of its predictive weight on `ob_after_upload` (a late-stage onboarding event). In production, newly uploaded leads have not reached onboarding yet.
-    2. **Multi-Lever Actionability:** Random Forest distributes importance across multi-stage funnel features:
-       - `ob_after_upload` (Onboarding initiation)
-       - `upload_to_first_attempt_p50_hrs` (Speed to first call)
-       - `lead_source_encoded` (Lead acquisition channel)
-       - `attempt_per_lead` (Call frequency)
-    3. **Operational Recommendation:** Tele-calling teams should optimize speed-to-first-call (`p50_hrs`) for top-performing lead channels to maximize First Trip completions.
-    """)
+    <div class="justification-box">
+    <h3><b>Why Random Forest is Chosen for Production Deployment:</b></h3>
+    <ol>
+        <li><b>Early-Funnel Scoring:</b> XGBoost concentrates over <b>80%</b> of its predictive weight on <code>ob_after_upload</code> (a late-stage onboarding event). In production, newly uploaded leads have not reached onboarding yet.</li>
+        <li><b>Multi-Lever Actionability:</b> Random Forest distributes importance across multi-stage funnel features:
+            <ul>
+                <li><code>ob_after_upload</code> (Onboarding initiation)</li>
+                <li><code>upload_to_first_attempt_p50_hrs</code> (Speed to first call)</li>
+                <li><code>lead_source_encoded</code> (Lead acquisition channel)</li>
+                <li><code>attempt_per_lead</code> (Call frequency)</li>
+            </ul>
+        </li>
+        <li><b>Operational Recommendation:</b> Tele-calling teams should optimize speed-to-first-call (<code>p50_hrs</code>) for top-performing lead channels to maximize First Trip completions.</li>
+    </ol>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ==========================================
 # PAGE 6: REAL-TIME FT CONVERSION PREDICTOR
 # ==========================================
-elif page == "🔮 Real-Time FT Conversion Predictor":
-    st.markdown('<div class="main-header">Real-Time Candidate FT Predictor</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Interactive tool using production Random Forest model to estimate First Trip conversion probability</div>', unsafe_allow_html=True)
+elif page == "Real-Time FT Conversion Predictor":
+    st.subheader("Real-Time Candidate FT Predictor")
+    st.caption("Interactive lead scoring tool using trained production Random Forest model to estimate First Trip conversion probability.")
     
     X, y, encoders = build_features(df)
     models = load_models()
     model = models.get('Fine-Tuned Random Forest', models.get('Random Forest', list(models.values())[0]))
     
-    st.sidebar.subheader("Production Model Active")
-    st.sidebar.success(f"Using **Random Forest**")
+    st.info("**Production Model Active:** Fine-Tuned Random Forest Engine")
     
-    col_a, col_b = st.columns(2)
-    with col_a:
-        lead_source_input = st.selectbox("Lead Source Cohort", encoders['lead_source_encoder'].classes_)
-        attempted_input = st.selectbox("Was Candidate Attempted/Called?", [1, 0])
-        connected_input = st.selectbox("Did the Call Connect?", [1, 0])
-        tag_filled_input = st.selectbox("Is Candidate Tag Form Filled?", [1, 0])
-        
-    with col_b:
-        interested_input = st.selectbox("Expressed Interest?", [1, 0])
-        ob_upload_input = st.selectbox("Onboarding After Upload Initiated?", [1, 0])
-        ob_first_attempt_input = st.selectbox("Onboarding After First Attempt?", [1, 0])
-        attempt_per_lead_input = st.number_input("Call Attempts per Lead", min_value=0.0, max_value=10.0, value=1.0)
-        p50_hrs_input = st.number_input("Speed to First Call (P50 Hours)", min_value=0.0, max_value=500.0, value=float(encoders['p50_median']))
-        
+    with st.container():
+        st.markdown("<div class='justification-box'><b>Candidate Features Input Panel</b></div>", unsafe_allow_html=True)
+        col_a, col_b = st.columns(2)
+        with col_a:
+            lead_source_input = st.selectbox("Lead Source Cohort", encoders['lead_source_encoder'].classes_)
+            attempted_input = st.selectbox("Was Candidate Attempted/Called?", [1, 0])
+            connected_input = st.selectbox("Did the Call Connect?", [1, 0])
+            tag_filled_input = st.selectbox("Is Candidate Tag Form Filled?", [1, 0])
+            
+        with col_b:
+            interested_input = st.selectbox("Expressed Interest?", [1, 0])
+            ob_upload_input = st.selectbox("Onboarding After Upload Initiated?", [1, 0])
+            ob_first_attempt_input = st.selectbox("Onboarding After First Attempt?", [1, 0])
+            attempt_per_lead_input = st.number_input("Call Attempts per Lead", min_value=0.0, max_value=10.0, value=1.0)
+            p50_hrs_input = st.number_input("Speed to First Call (P50 Hours)", min_value=0.0, max_value=500.0, value=float(encoders['p50_median']))
+            
     if st.button("Predict FT Conversion Probability"):
         input_data = pd.DataFrame([{
             'attempted': attempted_input,
@@ -295,12 +473,12 @@ elif page == "🔮 Real-Time FT Conversion Predictor":
         prob = model.predict_proba(input_data)[0, 1]
         
         st.markdown("---")
-        st.subheader("Prediction Result")
+        st.subheader("Prediction Result & Lead Score")
         res_col1, res_col2 = st.columns(2)
         with res_col1:
-            st.metric("Predicted FT Probability", f"{prob * 100:.2f}%")
+            st.metric("Predicted FT Conversion Probability", f"{prob * 100:.2f}%")
         with res_col2:
             if prob >= 0.5:
                 st.success("High Conversion Potential (Likely to Complete First Trip)")
             else:
-                st.warning("Low Conversion Probability (Follow-up Recommended)")
+                st.warning("Low Conversion Probability (Priority Follow-up Recommended)")

@@ -34,7 +34,7 @@ Vahan sources candidate lead numbers and tele-calls them to drive conversion to 
 ### **3. Q3 — Predictive ML & Production Usability**
 * **Models Evaluated:** Logistic Regression, Random Forest, XGBoost.
 * **Production Model Selection:** **Random Forest** chosen over XGBoost due to **early-funnel usability**. XGBoost over-indexes (>80% weight) on `ob_after_upload` (a late-stage onboarding event). Random Forest distributes importance across early operational levers (`upload_to_first_attempt_p50_hrs`, `lead_source_encoded`, `attempt_per_lead`), allowing tele-callers to score newly uploaded leads before onboarding.
-* **Fine-Tuning:** 3-fold cross-validated `GridSearchCV` hyperparameter tuning on Random Forest.
+* **Fine-Tuning:** 3-fold cross-validated `GridSearchCV` hyperparameter tuning. The `tune_best_model()` function supports tuning any of the three models (Logistic Regression, Random Forest, XGBoost). Serialized fine-tuned weights are saved for both Random Forest and XGBoost.
 
 ---
 
@@ -44,12 +44,16 @@ Vahan sources candidate lead numbers and tele-calls them to drive conversion to 
 VahanCaseStudy/
 │
 ├── app/
-│   └── app.py                        # Streamlit interactive web dashboard
+│   ├── app.py                        # Streamlit interactive web dashboard
+│   ├── assets/                       # Static assets (placeholder)
+│   ├── components/                   # Reusable UI components (placeholder)
+│   └── pages/                        # Multi-page Streamlit pages (placeholder)
 │
 ├── notebooks/
 │   └── VahanCaseStudy.ipynb          # Thin orchestrator notebook (Step 1 to Step 11)
 │
 ├── src/                              # Standalone Python modules (Source of truth)
+│   ├── __init__.py                   # Package initializer
 │   ├── db_setup.py                   # PostgreSQL connection & data loader
 │   ├── eda.py                        # Exploratory analysis & funnel plots
 │   ├── q1_cohort_analysis.py         # Cohort metrics computation & ranking
@@ -68,14 +72,23 @@ VahanCaseStudy/
 │   └── test_evaluation.py
 │
 ├── data/
-│   ├── Vahan_Case_Study.xlsx         # Raw dataset
-│   └── Gmail - Brief.pdf
+│   └── Vahan_Case_Study.xlsx         # Raw dataset
+│
+├── docs/                             # Documentation (reserved)
 │
 ├── models/                           # Serialized model weights (.pkl)
+│   ├── logistic_regression.pkl
+│   ├── random_forest.pkl
+│   ├── xgboost.pkl
+│   ├── fine-tuned_random_forest.pkl
+│   └── fine-tuned_xgboost.pkl
+│
 ├── .env.example                      # Environment variables template
 ├── .gitignore                        # Git exclusion rules
-└── requirements.txt                  # Python dependencies
+└── requirements.txt                  # Python dependencies (core subset)
 ```
+
+> **Note:** `requirements.txt` currently lists only `pandas`, `numpy`, and `streamlit`. The full pipeline additionally requires `scikit-learn`, `xgboost`, `joblib`, `matplotlib`, `seaborn`, `sqlalchemy`, `psycopg2-binary`, `openpyxl`, and `python-dotenv`. Install all dependencies manually or update the file before running the full pipeline.
 
 ---
 
@@ -93,8 +106,13 @@ cd VahanCaseStudy
 pip install -r requirements.txt
 ```
 
+To install all required dependencies (beyond what `requirements.txt` currently lists):
+```powershell
+pip install pandas numpy streamlit scikit-learn xgboost joblib matplotlib seaborn sqlalchemy psycopg2-binary openpyxl python-dotenv
+```
+
 ### **3. Environment Setup**
-Create a `.env` file in the project root:
+Copy `.env.example` to `.env` and fill in your PostgreSQL password:
 ```env
 DB_HOST=127.0.0.1
 DB_PORT=5432
@@ -128,7 +146,7 @@ streamlit run app/app.py
 ## 🔒 Security Audit & Compliance
 
 - **No Hardcoded Credentials:** Database connection strings are dynamically constructed via `os.getenv()` reading from `.env`.
-- **Git Ignore Safeguards:** `.env`, `.pytest_cache/`, `venv/`, and temporary build artifacts are strictly excluded from version control in `.gitignore`.
+- **Git Ignore Safeguards:** `.env`, `.pytest_cache/`, `venv/`, `__pycache__/`, `.ipynb_checkpoints/`, and `*.pyc` files are excluded from version control via `.gitignore`.
 - **Data Privacy:** Raw candidate phone numbers are stored as anonymized SHA-256 hashes (`candidate_phone`), preserving PII compliance.
 
 ---
