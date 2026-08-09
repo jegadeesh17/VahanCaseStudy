@@ -94,8 +94,8 @@ page = st.sidebar.radio(
         "📊 Executive Overview",
         "🏆 Q1: Cohort Performance Ranking",
         "⚡ Q2: SQL Query Engine (PostgreSQL)",
-        "🤖 Q3: ML Benchmarks & Fine-Tuning",
-        "🎯 Q3: Key Drivers & Features",
+        "🤖 Q3: ML Benchmarks & Selection",
+        "🎯 Q3: Production Model Drivers",
         "🔮 Real-Time FT Conversion Predictor"
     ]
 )
@@ -195,11 +195,11 @@ elif page == "⚡ Q2: SQL Query Engine (PostgreSQL)":
             st.download_button("Download Query Result CSV", data=csv, file_name="vahan_sql_aggregation.csv", mime="text/csv")
 
 # ==========================================
-# PAGE 4: Q3 ML BENCHMARKS & FINE-TUNING
+# PAGE 4: Q3 ML BENCHMARKS & SELECTION
 # ==========================================
-elif page == "🤖 Q3: ML Benchmarks & Fine-Tuning":
-    st.markdown('<div class="main-header">Q3 — Predictive Machine Learning Benchmark</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Comparing Logistic Regression, Random Forest, XGBoost, and Fine-Tuned XGBoost</div>', unsafe_allow_html=True)
+elif page == "🤖 Q3: ML Benchmarks & Selection":
+    st.markdown('<div class="main-header">Q3 — Predictive Machine Learning Benchmark & Production Selection</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Comparing models on performance metrics AND early-funnel practical usability</div>', unsafe_allow_html=True)
     
     X, y, encoders = build_features(df)
     X_train, X_test, y_train, y_test = get_train_test_split(X, y, test_size=0.2, random_state=42)
@@ -209,7 +209,7 @@ elif page == "🤖 Q3: ML Benchmarks & Fine-Tuning":
         with st.spinner("Training ML models..."):
             models = train_all_models(X_train, y_train)
             
-    st.subheader("Model Performance Benchmark")
+    st.subheader("Model Performance Benchmark Table")
     sum_df = summary_table(models, X_test, y_test)
     st.dataframe(sum_df, use_container_width=True)
     
@@ -217,24 +217,33 @@ elif page == "🤖 Q3: ML Benchmarks & Fine-Tuning":
     fig_cm = plot_all_confusion_matrices(models, X_test, y_test)
     st.pyplot(fig_cm)
 
+    st.subheader("Feature Driver Comparison (Usability Assessment)")
+    fig_imp = plot_feature_importances(models, list(X.columns))
+    st.pyplot(fig_imp)
+
 # ==========================================
-# PAGE 5: Q3 KEY DRIVERS & FEATURES
+# PAGE 5: Q3 PRODUCTION MODEL DRIVERS
 # ==========================================
-elif page == "🎯 Q3: Key Drivers & Features":
-    st.markdown('<div class="main-header">Q3 — Operational Drivers of FT Conversion</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Feature importances across trained models</div>', unsafe_allow_html=True)
+elif page == "🎯 Q3: Production Model Drivers":
+    st.markdown('<div class="main-header">Q3 — Production Model (Random Forest) Drivers</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Evaluating Random Forest feature importances for operational lead scoring</div>', unsafe_allow_html=True)
     
     X, y, _ = build_features(df)
     models = load_models()
+    rf_model = models.get('Fine-Tuned Random Forest', models.get('Random Forest', list(models.values())[0]))
     
-    fig_imp = plot_feature_importances(models, list(X.columns))
+    fig_imp = plot_feature_importances({'Random Forest': rf_model}, list(X.columns))
     st.pyplot(fig_imp)
     
     st.markdown("""
-    ### **Business Insights & Key Takeaways:**
-    1. **Connection & Intent dominate:** `connected` and `interested` are consistently ranked as the #1 and #2 predictors across Random Forest, XGBoost, and Logistic Regression.
-    2. **Channel Sourcing vs Call Responsiveness:** Lead source cohort identity has secondary predictive weight compared to whether a candidate actually picks up and expresses interest.
-    3. **Actionable Operational Strategy:** Focus tele-calling speed on high-intent candidates (`interested = 1`) to drive them to onboarding (`OB_after_upload = 1`) and complete their First Trip (FT).
+    ### **Why Random Forest is Chosen for Production Deployment:**
+    1. **Early-Funnel Scoring:** XGBoost concentrates over **80%** of its predictive weight on `ob_after_upload` (a late-stage onboarding event). In production, newly uploaded leads have not reached onboarding yet.
+    2. **Multi-Lever Actionability:** Random Forest distributes importance across multi-stage funnel features:
+       - `ob_after_upload` (Onboarding initiation)
+       - `upload_to_first_attempt_p50_hrs` (Speed to first call)
+       - `lead_source_encoded` (Lead acquisition channel)
+       - `attempt_per_lead` (Call frequency)
+    3. **Operational Recommendation:** Tele-calling teams should optimize speed-to-first-call (`p50_hrs`) for top-performing lead channels to maximize First Trip completions.
     """)
 
 # ==========================================
@@ -242,14 +251,14 @@ elif page == "🎯 Q3: Key Drivers & Features":
 # ==========================================
 elif page == "🔮 Real-Time FT Conversion Predictor":
     st.markdown('<div class="main-header">Real-Time Candidate FT Predictor</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Interactive tool to estimate First Trip conversion probability for candidate leads</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Interactive tool using production Random Forest model to estimate First Trip conversion probability</div>', unsafe_allow_html=True)
     
     X, y, encoders = build_features(df)
     models = load_models()
-    model = models.get('Fine-Tuned XGBoost', models.get('XGBoost', list(models.values())[0]))
+    model = models.get('Fine-Tuned Random Forest', models.get('Random Forest', list(models.values())[0]))
     
-    st.sidebar.subheader("Model Selected for Prediction")
-    st.sidebar.info(f"Using **{type(model).__name__}**")
+    st.sidebar.subheader("Production Model Active")
+    st.sidebar.success(f"Using **Random Forest**")
     
     col_a, col_b = st.columns(2)
     with col_a:
@@ -284,7 +293,6 @@ elif page == "🔮 Real-Time FT Conversion Predictor":
         input_data = input_data[X.columns]
         
         prob = model.predict_proba(input_data)[0, 1]
-        pred_class = int(prob >= 0.5)
         
         st.markdown("---")
         st.subheader("Prediction Result")
