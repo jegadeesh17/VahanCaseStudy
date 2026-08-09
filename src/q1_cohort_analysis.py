@@ -1,4 +1,5 @@
 from pathlib import Path
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -25,9 +26,9 @@ def compute_cohort_metrics(df: pd.DataFrame) -> pd.DataFrame:
     ).reset_index()
 
     aggregated['attempt_rate_pct'] = (aggregated['attempted'] / aggregated['total_leads'] * 100).round(2)
-    aggregated['connect_rate_pct'] = (aggregated['connected'] / aggregated['attempted'].replace(0, pd.NA)).astype(float).fillna(0.0).mul(100).round(2)
-    aggregated['interest_rate_pct'] = (aggregated['interested'] / aggregated['connected'].replace(0, pd.NA)).astype(float).fillna(0.0).mul(100).round(2)
-    aggregated['ob_rate_pct'] = (aggregated['onboarded'] / aggregated['interested'].replace(0, pd.NA)).astype(float).fillna(0.0).mul(100).round(2)
+    aggregated['connect_rate_pct'] = (aggregated['connected'] / aggregated['attempted'].replace(0, np.nan)).fillna(0.0).mul(100).round(2)
+    aggregated['interest_rate_pct'] = (aggregated['interested'] / aggregated['connected'].replace(0, np.nan)).fillna(0.0).mul(100).round(2)
+    aggregated['ob_rate_pct'] = (aggregated['onboarded'] / aggregated['interested'].replace(0, np.nan)).fillna(0.0).mul(100).round(2)
     aggregated['ft_conversion_rate_pct'] = (aggregated['ft_conversions'] / aggregated['total_leads'] * 100).round(2)
 
     return aggregated
