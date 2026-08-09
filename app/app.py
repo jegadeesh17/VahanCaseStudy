@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -451,19 +452,21 @@ elif page == "Q3: Feature Drivers":
     <div class="justification-box">
     <h3><b>Why Random Forest is Chosen for Production Deployment:</b></h3>
     <ol>
-        <li><b>Early-Funnel Scoring:</b> XGBoost concentrates over <b>80%</b> of its predictive weight on <code>ob_after_upload</code> (a late-stage onboarding event). In production, newly uploaded leads have not reached onboarding yet.</li>
-        <li><b>Multi-Lever Actionability:</b> Random Forest distributes importance across multi-stage funnel features:
+        <li><b>Early-Funnel Scoring:</b> XGBoost concentrates over <b>80%</b> of its predictive weight on <code>ob_after_upload</code> (a late-stage onboarding event). In production, newly uploaded leads have not reached onboarding yet — this makes XGBoost's top feature unavailable at scoring time.</li>
+        <li><b>Leakage-Free Feature Set:</b> <code>ob_after_upload</code> and <code>ob_after_first_attempt</code> are <b>excluded from the model</b> — they require the lead to have already connected and expressed interest, which defeats early-funnel scoring. The model uses only features observable at upload/initial call time.</li>
+        <li><b>Multi-Lever Actionability:</b> Random Forest distributes importance across early-stage operational levers:
             <ul>
-                <li><code>ob_after_upload</code> (Onboarding initiation)</li>
-                <li><code>upload_to_first_attempt_p50_hrs</code> (Speed to first call)</li>
-                <li><code>lead_source_encoded</code> (Lead acquisition channel)</li>
-                <li><code>attempt_per_lead</code> (Call frequency)</li>
+                <li><code>upload_to_first_attempt_p50_hrs</code> (Speed to first call — fully controllable by ops)</li>
+                <li><code>lead_source_encoded</code> (Lead acquisition channel — budget allocation lever)</li>
+                <li><code>attempt_per_lead</code> (Call frequency — tele-caller effort signal)</li>
+                <li><code>connected</code>, <code>interested</code>, <code>tag_filled</code> (Early-call quality signals)</li>
             </ul>
         </li>
-        <li><b>Operational Recommendation:</b> Tele-calling teams should optimize speed-to-first-call (<code>p50_hrs</code>) for top-performing lead channels to maximize First Trip completions.</li>
+        <li><b>Operational Recommendation:</b> Tele-calling teams should optimize speed-to-first-call (<code>p50_hrs</code>) and call attempt frequency for top-performing lead channels to maximize First Trip completions.</li>
     </ol>
     </div>
     """, unsafe_allow_html=True)
+
 
 # ==========================================
 # PAGE 6: REAL-TIME FT CONVERSION PREDICTOR
@@ -476,10 +479,10 @@ elif page == "Lead Predictor":
     models = load_models()
     model = models.get('Fine-Tuned Random Forest', models.get('Random Forest', list(models.values())[0]))
     
-    st.info("**Production Model Active:** Fine-Tuned Random Forest Engine")
+    st.info("**Production Model Active:** Fine-Tuned Random Forest | Features scored at upload time — onboarding status intentionally excluded (post-event signal not available for new leads).")
     
     with st.container():
-        st.markdown("<div class='justification-box'><b>Candidate Features Input Panel</b></div>", unsafe_allow_html=True)
+        st.markdown("<div class='justification-box'><b>Candidate Features Input Panel</b><br><small>Score a lead using only information available at the time of upload and initial call attempts.</small></div>", unsafe_allow_html=True)
         col_a, col_b = st.columns(2)
         with col_a:
             lead_source_input = st.selectbox("Lead Source Cohort", encoders['lead_source_encoder'].classes_)
@@ -489,23 +492,21 @@ elif page == "Lead Predictor":
             
         with col_b:
             interested_input = st.selectbox("Expressed Interest?", [1, 0])
-            ob_upload_input = st.selectbox("Onboarding After Upload Initiated?", [1, 0])
-            ob_first_attempt_input = st.selectbox("Onboarding After First Attempt?", [1, 0])
             attempt_per_lead_input = st.number_input("Call Attempts per Lead", min_value=0.0, max_value=10.0, value=1.0)
             p50_hrs_input = st.number_input("Speed to First Call (P50 Hours)", min_value=0.0, max_value=500.0, value=float(encoders['p50_median']))
+            upload_date_input = st.date_input("Lead Upload Date", value=datetime.today())
             
     if st.button("Predict FT Conversion Probability"):
+        upload_dt = pd.to_datetime(upload_date_input)
         input_data = pd.DataFrame([{
             'attempted': attempted_input,
             'connected': connected_input,
             'attempt_per_lead': attempt_per_lead_input,
             'tag_filled': tag_filled_input,
             'interested': interested_input,
-            'ob_after_upload': ob_upload_input,
-            'ob_after_first_attempt': ob_first_attempt_input,
             'upload_to_first_attempt_p50_hrs': p50_hrs_input,
-            'day_of_week': 3,
-            'day_of_month': 18,
+            'day_of_week': upload_dt.dayofweek,
+            'day_of_month': upload_dt.day,
             'lead_source_encoded': encoders['lead_source_encoder'].transform([lead_source_input])[0]
         }])
         
@@ -524,3 +525,4 @@ elif page == "Lead Predictor":
                 st.success("High Conversion Potential (Likely to Complete First Trip)")
             else:
                 st.warning("Low Conversion Probability (Priority Follow-up Recommended)")
+

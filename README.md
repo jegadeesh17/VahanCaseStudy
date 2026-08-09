@@ -33,8 +33,9 @@ Vahan sources candidate lead numbers and tele-calls them to drive conversion to 
 
 ### **3. Q3 — Predictive ML & Production Usability**
 * **Models Evaluated:** Logistic Regression, Random Forest, XGBoost.
-* **Production Model Selection:** **Random Forest** chosen over XGBoost due to **early-funnel usability**. XGBoost over-indexes (>80% weight) on `ob_after_upload` (a late-stage onboarding event). Random Forest distributes importance across early operational levers (`upload_to_first_attempt_p50_hrs`, `lead_source_encoded`, `attempt_per_lead`), allowing tele-callers to score newly uploaded leads before onboarding.
-* **Fine-Tuning:** 3-fold cross-validated `GridSearchCV` hyperparameter tuning. The `tune_best_model()` function supports tuning any of the three models (Logistic Regression, Random Forest, XGBoost). Serialized fine-tuned weights are saved for both Random Forest and XGBoost.
+* **Leakage Exclusions:** `ob_after_upload` and `ob_after_first_attempt` are excluded from the feature matrix. Both columns are mid-to-late funnel events — they only become observable after a lead has already connected and expressed interest, which is after the point where scoring is useful. Including them would give the model information that doesn't exist for freshly uploaded leads.
+* **Production Model Selection:** **Random Forest** chosen over XGBoost for **early-funnel usability**. When `ob_after_upload` is properly excluded, XGBoost's advantage shrinks — and Random Forest distributes importance across early operational levers: `upload_to_first_attempt_p50_hrs`, `lead_source_encoded`, and `attempt_per_lead`. These features are available immediately after lead upload and are directly actionable by tele-calling teams.
+* **Fine-Tuning:** 3-fold cross-validated `GridSearchCV` hyperparameter tuning. The `tune_best_model()` function supports tuning any of the three models. Serialized fine-tuned weights are saved for both Random Forest and XGBoost.
 
 ---
 
