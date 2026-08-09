@@ -12,12 +12,20 @@ project_root = Path(__file__).resolve().parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+import importlib
+import src.models
+import src.evaluation
+import src.feature_engineering
+importlib.reload(src.models)
+importlib.reload(src.evaluation)
+importlib.reload(src.feature_engineering)
+
 from src.db_setup import get_engine, load_data
 from src.eda import null_report, cohort_sizes, overall_funnel_rates, plot_class_imbalance
 from src.q1_cohort_analysis import compute_cohort_metrics, rank_cohorts, top_3_cohorts, METRIC_JUSTIFICATION
 from src.q2_sql_query import get_q2_result, run_query, COHORT_DATE_AGGREGATION_QUERY, COHORT_ROLLUP_QUERY
 from src.feature_engineering import build_features, get_train_test_split
-from src.models import train_all_models, load_models
+from src.models import train_all_models, load_models, tune_best_model, save_models
 from src.evaluation import summary_table, plot_all_confusion_matrices, plot_feature_importances, evaluate_model
 import plotly.graph_objects as go
 
@@ -417,10 +425,18 @@ elif page == "Q3: ML Benchmarks":
     X, y, encoders = build_features(df)
     X_train, X_test, y_train, y_test = get_train_test_split(X, y, test_size=0.2, random_state=42)
     
-    models = load_models()
+    try:
+        models = load_models(expected_features=X.shape[1])
+    except TypeError:
+        models = load_models()
     if not models or len(models) < 3:
         with st.spinner("Training ML models..."):
             models = train_all_models(X_train, y_train)
+            best_rf, _ = tune_best_model(X_train, y_train, model_name='Random Forest')
+            best_xgb, _ = tune_best_model(X_train, y_train, model_name='XGBoost')
+            models['Fine-Tuned Random Forest'] = best_rf
+            models['Fine-Tuned XGBoost'] = best_xgb
+            save_models(models)
             
     st.subheader("Model Performance Benchmark Table")
     sum_df = summary_table(models, X_test, y_test)
@@ -442,7 +458,16 @@ elif page == "Q3: Feature Drivers":
     st.caption("Evaluating Random Forest feature importances for operational lead scoring and tele-calling strategies.")
     
     X, y, _ = build_features(df)
-    models = load_models()
+    try:
+        models = load_models(expected_features=X.shape[1])
+    except TypeError:
+        models = load_models()
+    if not models:
+        X_train, X_test, y_train, y_test = get_train_test_split(X, y, test_size=0.2, random_state=42)
+        models = train_all_models(X_train, y_train)
+        best_rf, _ = tune_best_model(X_train, y_train, model_name='Random Forest')
+        models['Fine-Tuned Random Forest'] = best_rf
+        save_models(models)
     rf_model = models.get('Fine-Tuned Random Forest', models.get('Random Forest', list(models.values())[0]))
     
     fig_imp = plot_feature_importances({'Random Forest': rf_model}, list(X.columns))
@@ -476,7 +501,16 @@ elif page == "Lead Predictor":
     st.caption("Interactive lead scoring tool using trained production Random Forest model to estimate First Trip conversion probability.")
     
     X, y, encoders = build_features(df)
-    models = load_models()
+    try:
+        models = load_models(expected_features=X.shape[1])
+    except TypeError:
+        models = load_models()
+    if not models:
+        X_train, X_test, y_train, y_test = get_train_test_split(X, y, test_size=0.2, random_state=42)
+        models = train_all_models(X_train, y_train)
+        best_rf, _ = tune_best_model(X_train, y_train, model_name='Random Forest')
+        models['Fine-Tuned Random Forest'] = best_rf
+        save_models(models)
     model = models.get('Fine-Tuned Random Forest', models.get('Random Forest', list(models.values())[0]))
     
     st.info("**Production Model Active:** Fine-Tuned Random Forest | Features scored at upload time — onboarding status intentionally excluded (post-event signal not available for new leads).")

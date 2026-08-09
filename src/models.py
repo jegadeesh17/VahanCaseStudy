@@ -106,7 +106,7 @@ def save_models(models_dict: dict, output_dir: str = None) -> None:
         filename = name.lower().replace(' ', '_') + '.pkl'
         joblib.dump(model, output_dir / filename)
 
-def load_models(input_dir: str = None) -> dict:
+def load_models(input_dir: str = None, expected_features: int = None) -> dict:
     """Load persisted models from disk."""
     if input_dir is None:
         project_root = Path(__file__).resolve().parent.parent
@@ -125,6 +125,17 @@ def load_models(input_dir: str = None) -> dict:
     for file, name in mapping.items():
         filepath = input_dir / file
         if filepath.exists():
-            models[name] = joblib.load(filepath)
+            try:
+                m = joblib.load(filepath)
+                if expected_features is not None:
+                    n_feat = getattr(m, 'n_features_in_', getattr(m, 'feature_importances_', None))
+                    if n_feat is not None:
+                        count = n_feat if isinstance(n_feat, (int, np.integer)) else len(n_feat)
+                        if count != expected_features:
+                            continue
+                models[name] = m
+            except Exception:
+                continue
     return models
+
 

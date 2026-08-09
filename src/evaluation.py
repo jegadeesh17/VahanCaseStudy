@@ -76,7 +76,15 @@ def get_feature_importance_df(model, feature_names: list) -> pd.DataFrame:
         scores = np.abs(model.coef_[0])
     else:
         scores = np.zeros(len(feature_names))
-        
+
+    if len(scores) != len(feature_names):
+        if hasattr(model, "feature_names_in_") and len(model.feature_names_in_) == len(scores):
+            feature_names = list(model.feature_names_in_)
+        elif len(scores) < len(feature_names):
+            feature_names = feature_names[:len(scores)]
+        else:
+            feature_names = list(feature_names) + [f"feature_{i}" for i in range(len(feature_names), len(scores))]
+            
     df_imp = pd.DataFrame({
         'feature': feature_names,
         'importance': scores
